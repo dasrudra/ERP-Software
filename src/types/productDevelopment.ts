@@ -199,6 +199,32 @@ export type MaterialReservationStatus =
   | "Issued"
   | "Cancelled";
 
+export type MaterialIssueStatus =
+  | "Not Started"
+  | "Draft"
+  | "Issued"
+  | "Cancelled";
+
+export type ProductionRunStatus =
+  | "Not Started"
+  | "Running"
+  | "Paused"
+  | "Completed"
+  | "Cancelled";
+
+export type QCInspectionStatus =
+  | "Not Started"
+  | "Pending"
+  | "Passed"
+  | "Failed"
+  | "Rework Required"
+  | "Cancelled";
+
+export type FinishedGoodsTransferStatus =
+  | "Not Started"
+  | "Received"
+  | "Cancelled";
+
 export type ReservedMaterialStockStatus =
   | "Available"
   | "Low Stock"
@@ -213,6 +239,16 @@ export type ReservedMaterial = {
   requiredQuantity: number;
   reservedQuantity: number;
   stockStatus: ReservedMaterialStockStatus;
+  remarks?: string;
+};
+
+export type MaterialIssueLine = {
+  id: string;
+  materialCode: string;
+  materialName: string;
+  specification: string;
+  unit: string;
+  issuedQuantity: number;
   remarks?: string;
 };
 
@@ -233,6 +269,14 @@ export type ProductionOrderDraft = {
   notes?: string;
   materialReservationNo?: string;
   materialReservationStatus?: MaterialReservationStatus;
+  materialIssueNo?: string;
+  materialIssueStatus?: MaterialIssueStatus;
+  productionRunNo?: string;
+  productionRunStatus?: ProductionRunStatus;
+  qcInspectionNo?: string;
+  qcInspectionStatus?: QCInspectionStatus;
+  finishedGoodsTransferNo?: string;
+  finishedGoodsTransferStatus?: FinishedGoodsTransferStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -251,6 +295,107 @@ export type MaterialReservationDraft = {
   materials: ReservedMaterial[];
   reservedBy: string;
   reservedAt: string;
+  notes?: string;
+  materialIssueNo?: string;
+  materialIssueStatus?: MaterialIssueStatus;
+  issuedBy?: string;
+  issuedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MaterialIssueDraft = {
+  id: string;
+  requestId: string;
+  productionOrderId: string;
+  productionOrderNo: string;
+  salesOrderNo: string;
+  materialReservationId: string;
+  materialReservationNo: string;
+  materialIssueNo: string;
+  status: MaterialIssueStatus;
+  customer: string;
+  productType: DevelopmentType;
+  orderQuantity: number;
+  materials: MaterialIssueLine[];
+  issuedBy: string;
+  issuedAt: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProductionRunDraft = {
+  id: string;
+  requestId: string;
+  productionOrderId: string;
+  productionOrderNo: string;
+  salesOrderNo: string;
+  productionRunNo: string;
+  status: ProductionRunStatus;
+  customer: string;
+  productType: DevelopmentType;
+  orderQuantity: number;
+  startedQuantity: number;
+  completedQuantity: number;
+  rejectedQuantity: number;
+  workCenter: string;
+  startedBy: string;
+  startedAt: string;
+  completedBy?: string;
+  completedAt?: string;
+  notes?: string;
+  qcInspectionNo?: string;
+  qcInspectionStatus?: QCInspectionStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type QCInspectionDraft = {
+  id: string;
+  requestId: string;
+  productionOrderId: string;
+  productionOrderNo: string;
+  productionRunId: string;
+  productionRunNo: string;
+  salesOrderNo: string;
+  qcInspectionNo: string;
+  status: QCInspectionStatus;
+  customer: string;
+  productType: DevelopmentType;
+  orderQuantity: number;
+  inspectedQuantity: number;
+  passedQuantity: number;
+  rejectedQuantity: number;
+  inspector?: string;
+  passedBy?: string;
+  passedAt?: string;
+  notes?: string;
+  finishedGoodsTransferNo?: string;
+  finishedGoodsTransferStatus?: FinishedGoodsTransferStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FinishedGoodsTransferDraft = {
+  id: string;
+  requestId: string;
+  productionOrderId: string;
+  productionOrderNo: string;
+  productionRunId: string;
+  productionRunNo: string;
+  qcInspectionId: string;
+  qcInspectionNo: string;
+  salesOrderNo: string;
+  finishedGoodsTransferNo: string;
+  status: FinishedGoodsTransferStatus;
+  customer: string;
+  productType: DevelopmentType;
+  quantity: number;
+  rejectedQuantity: number;
+  warehouseLocation: string;
+  receivedBy: string;
+  receivedAt: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -289,4 +434,12 @@ export type DevelopmentRequest = {
   productionOrderStatus?: ProductionOrderStatus;
   materialReservationNo?: string;
   materialReservationStatus?: MaterialReservationStatus;
+  materialIssueNo?: string;
+  materialIssueStatus?: MaterialIssueStatus;
+  productionRunNo?: string;
+  productionRunStatus?: ProductionRunStatus;
+  qcInspectionNo?: string;
+  qcInspectionStatus?: QCInspectionStatus;
+  finishedGoodsTransferNo?: string;
+  finishedGoodsTransferStatus?: FinishedGoodsTransferStatus;
 };

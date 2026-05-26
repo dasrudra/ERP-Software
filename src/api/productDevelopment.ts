@@ -7,13 +7,18 @@ import {
   DevelopmentRequest,
   DevelopmentStatus,
   DevelopmentType,
+  FinishedGoodsTransferDraft,
+  MaterialIssueDraft,
+  MaterialIssueLine,
   MaterialReservationDraft,
   ProcessCard,
   ProcessCardApprovalStatus,
   ProcessCardMaterial,
   ProcessCardStep,
   ProductionOrderDraft,
+  ProductionRunDraft,
   ProformaInvoiceDraft,
+  QCInspectionDraft,
   QuotationCurrency,
   QuotationDraft,
   ReservedMaterial,
@@ -34,6 +39,10 @@ type MockProductDevelopmentState = {
   salesOrders: SalesOrderDraft[];
   productionOrders: ProductionOrderDraft[];
   materialReservations: MaterialReservationDraft[];
+  materialIssues: MaterialIssueDraft[];
+  productionRuns: ProductionRunDraft[];
+  qcInspections: QCInspectionDraft[];
+  finishedGoodsTransfers: FinishedGoodsTransferDraft[];
 };
 
 const defaultDevelopmentRequests: DevelopmentRequest[] = [
@@ -47,6 +56,11 @@ const defaultDevelopmentRequests: DevelopmentRequest[] = [
     productionOrderStatus: request.productionOrderStatus || "Not Started",
     materialReservationStatus:
       request.materialReservationStatus || "Not Started",
+    materialIssueStatus: request.materialIssueStatus || "Not Started",
+    productionRunStatus: request.productionRunStatus || "Not Started",
+    qcInspectionStatus: request.qcInspectionStatus || "Not Started",
+    finishedGoodsTransferStatus:
+      request.finishedGoodsTransferStatus || "Not Started",
   })),
 ];
 
@@ -58,6 +72,10 @@ let proformaInvoicesStore: ProformaInvoiceDraft[] = [];
 let salesOrdersStore: SalesOrderDraft[] = [];
 let productionOrdersStore: ProductionOrderDraft[] = [];
 let materialReservationsStore: MaterialReservationDraft[] = [];
+let materialIssuesStore: MaterialIssueDraft[] = [];
+let productionRunsStore: ProductionRunDraft[] = [];
+let qcInspectionsStore: QCInspectionDraft[] = [];
+let finishedGoodsTransfersStore: FinishedGoodsTransferDraft[] = [];
 
 hydrateMockStateFromLocalStorage();
 
@@ -138,6 +156,31 @@ export type CreateMaterialReservationPayload = {
   notes?: string;
 };
 
+export type IssueMaterialReservationPayload = {
+  issuedBy: string;
+  issueDate?: string;
+  notes?: string;
+};
+
+export type StartProductionPayload = {
+  startedBy: string;
+  startedAt?: string;
+  notes?: string;
+};
+
+export type CompleteProductionPayload = {
+  completedBy: string;
+  completedAt?: string;
+  notes?: string;
+};
+
+export type PassQCInspectionPayload = {
+  passedBy: string;
+  passedAt?: string;
+  warehouseLocation?: string;
+  notes?: string;
+};
+
 export type SalesQuotationDraft = QuotationDraft & {
   customer: string;
   requestName: string;
@@ -162,7 +205,27 @@ export type ProductionOrderListItem = ProductionOrderDraft & {
   sourceInquiryNo?: string;
 };
 
+export type ProductionRunListItem = ProductionRunDraft & {
+  requestName: string;
+  sourceInquiryNo?: string;
+};
+
+export type QCInspectionListItem = QCInspectionDraft & {
+  requestName: string;
+  sourceInquiryNo?: string;
+};
+
 export type InventoryMaterialReservationListItem = MaterialReservationDraft & {
+  requestName: string;
+  sourceInquiryNo?: string;
+};
+
+export type InventoryMaterialIssueListItem = MaterialIssueDraft & {
+  requestName: string;
+  sourceInquiryNo?: string;
+};
+
+export type InventoryFinishedGoodsListItem = FinishedGoodsTransferDraft & {
   requestName: string;
   sourceInquiryNo?: string;
 };
@@ -218,6 +281,10 @@ export async function createDevelopmentRequest(
       salesOrderStatus: "Not Started",
       productionOrderStatus: "Not Started",
       materialReservationStatus: "Not Started",
+      materialIssueStatus: "Not Started",
+      productionRunStatus: "Not Started",
+      qcInspectionStatus: "Not Started",
+      finishedGoodsTransferStatus: "Not Started",
     };
 
     developmentRequestsStore = [newRequest, ...developmentRequestsStore];
@@ -842,6 +909,18 @@ export async function releaseSalesOrder(
       materialReservationNo: existingProductionOrder?.materialReservationNo,
       materialReservationStatus:
         existingProductionOrder?.materialReservationStatus || "Not Started",
+      materialIssueNo: existingProductionOrder?.materialIssueNo,
+      materialIssueStatus:
+        existingProductionOrder?.materialIssueStatus || "Not Started",
+      productionRunNo: existingProductionOrder?.productionRunNo,
+      productionRunStatus:
+        existingProductionOrder?.productionRunStatus || "Not Started",
+      qcInspectionNo: existingProductionOrder?.qcInspectionNo,
+      qcInspectionStatus:
+        existingProductionOrder?.qcInspectionStatus || "Not Started",
+      finishedGoodsTransferNo: existingProductionOrder?.finishedGoodsTransferNo,
+      finishedGoodsTransferStatus:
+        existingProductionOrder?.finishedGoodsTransferStatus || "Not Started",
       createdAt: existingProductionOrder?.createdAt || now,
       updatedAt: now,
     };
@@ -862,6 +941,18 @@ export async function releaseSalesOrder(
             materialReservationNo: productionOrder.materialReservationNo,
             materialReservationStatus:
               productionOrder.materialReservationStatus || "Not Started",
+            materialIssueNo: productionOrder.materialIssueNo,
+            materialIssueStatus:
+              productionOrder.materialIssueStatus || "Not Started",
+            productionRunNo: productionOrder.productionRunNo,
+            productionRunStatus:
+              productionOrder.productionRunStatus || "Not Started",
+            qcInspectionNo: productionOrder.qcInspectionNo,
+            qcInspectionStatus:
+              productionOrder.qcInspectionStatus || "Not Started",
+            finishedGoodsTransferNo: productionOrder.finishedGoodsTransferNo,
+            finishedGoodsTransferStatus:
+              productionOrder.finishedGoodsTransferStatus || "Not Started",
             lastUpdate: "Just now",
           }
         : request,
@@ -950,14 +1041,19 @@ export async function createMaterialReservation(
       productionOrderNo: productionOrder.productionOrderNo,
       salesOrderNo: productionOrder.salesOrderNo,
       materialReservationNo,
-      status: reservationStatus,
+      status: existingReservation?.status || reservationStatus,
       customer: productionOrder.customer,
       productType: productionOrder.productType,
       orderQuantity: productionOrder.orderQuantity,
       materials,
       reservedBy: payload.reservedBy,
-      reservedAt: now,
+      reservedAt: existingReservation?.reservedAt || now,
       notes: payload.notes,
+      materialIssueNo: existingReservation?.materialIssueNo,
+      materialIssueStatus:
+        existingReservation?.materialIssueStatus || "Not Started",
+      issuedBy: existingReservation?.issuedBy,
+      issuedAt: existingReservation?.issuedAt,
       createdAt: existingReservation?.createdAt || now,
       updatedAt: now,
     };
@@ -974,7 +1070,10 @@ export async function createMaterialReservation(
             ...order,
             status: "Planned",
             materialReservationNo,
-            materialReservationStatus: reservationStatus,
+            materialReservationStatus: savedReservation.status,
+            materialIssueNo: savedReservation.materialIssueNo,
+            materialIssueStatus:
+              savedReservation.materialIssueStatus || "Not Started",
             updatedAt: now,
           }
         : order,
@@ -986,7 +1085,10 @@ export async function createMaterialReservation(
             ...request,
             productionOrderStatus: "Planned",
             materialReservationNo,
-            materialReservationStatus: reservationStatus,
+            materialReservationStatus: savedReservation.status,
+            materialIssueNo: savedReservation.materialIssueNo,
+            materialIssueStatus:
+              savedReservation.materialIssueStatus || "Not Started",
             lastUpdate: "Just now",
           }
         : request,
@@ -999,6 +1101,503 @@ export async function createMaterialReservation(
 
   return api.post<MaterialReservationDraft>(
     `/development-requests/${requestId}/material-reservation`,
+    payload,
+  );
+}
+
+export async function issueMaterialReservation(
+  requestId: string,
+  payload: IssueMaterialReservationPayload,
+): Promise<MaterialIssueDraft> {
+  if (USE_MOCK_DATA) {
+    await delay(300);
+
+    const reservation = materialReservationsStore.find(
+      (item) => item.requestId === requestId,
+    );
+
+    if (!reservation) {
+      throw new Error("Material Reservation not found.");
+    }
+
+    const existingIssue = materialIssuesStore.find(
+      (issue) => issue.requestId === requestId,
+    );
+
+    if (existingIssue && reservation.status === "Issued") {
+      return existingIssue;
+    }
+
+    if (
+      reservation.status !== "Reserved" &&
+      reservation.status !== "Partially Reserved"
+    ) {
+      throw new Error(
+        "Only Reserved or Partially Reserved materials can be issued.",
+      );
+    }
+
+    const productionOrder = productionOrdersStore.find(
+      (order) => order.requestId === requestId,
+    );
+
+    if (!productionOrder) {
+      throw new Error("Production Order not found.");
+    }
+
+    const now = new Date().toISOString();
+    const issuedAt = payload.issueDate || now;
+    const materialIssueNo =
+      existingIssue?.materialIssueNo || createMaterialIssueNo();
+
+    const issueLines = reservation.materials.map(createMaterialIssueLine);
+
+    const savedIssue: MaterialIssueDraft = {
+      id: existingIssue?.id || `MI-DRAFT-${Date.now()}`,
+      requestId,
+      productionOrderId: productionOrder.id,
+      productionOrderNo: productionOrder.productionOrderNo,
+      salesOrderNo: productionOrder.salesOrderNo,
+      materialReservationId: reservation.id,
+      materialReservationNo: reservation.materialReservationNo,
+      materialIssueNo,
+      status: "Issued",
+      customer: reservation.customer,
+      productType: reservation.productType,
+      orderQuantity: reservation.orderQuantity,
+      materials: issueLines,
+      issuedBy: payload.issuedBy,
+      issuedAt,
+      notes: payload.notes,
+      createdAt: existingIssue?.createdAt || now,
+      updatedAt: now,
+    };
+
+    materialIssuesStore = existingIssue
+      ? materialIssuesStore.map((issue) =>
+          issue.requestId === requestId ? savedIssue : issue,
+        )
+      : [savedIssue, ...materialIssuesStore];
+
+    materialReservationsStore = materialReservationsStore.map((item) =>
+      item.requestId === requestId
+        ? {
+            ...item,
+            status: "Issued",
+            materialIssueNo,
+            materialIssueStatus: "Issued",
+            issuedBy: payload.issuedBy,
+            issuedAt,
+            updatedAt: now,
+          }
+        : item,
+    );
+
+    productionOrdersStore = productionOrdersStore.map((order) =>
+      order.requestId === requestId
+        ? {
+            ...order,
+            status: "Released",
+            materialReservationStatus: "Issued",
+            materialIssueNo,
+            materialIssueStatus: "Issued",
+            updatedAt: now,
+          }
+        : order,
+    );
+
+    developmentRequestsStore = developmentRequestsStore.map((request) =>
+      request.id === requestId
+        ? {
+            ...request,
+            productionOrderStatus: "Released",
+            materialReservationStatus: "Issued",
+            materialIssueNo,
+            materialIssueStatus: "Issued",
+            lastUpdate: "Just now",
+          }
+        : request,
+    );
+
+    persistMockStateToLocalStorage();
+
+    return savedIssue;
+  }
+
+  return api.post<MaterialIssueDraft>(
+    `/development-requests/${requestId}/material-issue`,
+    payload,
+  );
+}
+
+export async function startProductionOrder(
+  requestId: string,
+  payload: StartProductionPayload,
+): Promise<ProductionRunDraft> {
+  if (USE_MOCK_DATA) {
+    await delay(300);
+
+    const productionOrder = productionOrdersStore.find(
+      (order) => order.requestId === requestId,
+    );
+
+    if (!productionOrder) {
+      throw new Error("Production Order not found.");
+    }
+
+    if (productionOrder.status !== "Released") {
+      throw new Error("Only Released Production Orders can be started.");
+    }
+
+    if (productionOrder.materialIssueStatus !== "Issued") {
+      throw new Error("Materials must be issued before starting production.");
+    }
+
+    const existingRun = productionRunsStore.find(
+      (run) => run.requestId === requestId,
+    );
+
+    if (existingRun) {
+      return existingRun;
+    }
+
+    const now = new Date().toISOString();
+    const startedAt = payload.startedAt || now;
+    const productionRunNo = createProductionRunNo();
+
+    const savedRun: ProductionRunDraft = {
+      id: `WIP-DRAFT-${Date.now()}`,
+      requestId,
+      productionOrderId: productionOrder.id,
+      productionOrderNo: productionOrder.productionOrderNo,
+      salesOrderNo: productionOrder.salesOrderNo,
+      productionRunNo,
+      status: "Running",
+      customer: productionOrder.customer,
+      productType: productionOrder.productType,
+      orderQuantity: productionOrder.orderQuantity,
+      startedQuantity: productionOrder.orderQuantity,
+      completedQuantity: 0,
+      rejectedQuantity: 0,
+      workCenter: productionOrder.workCenter,
+      startedBy: payload.startedBy,
+      startedAt,
+      notes: payload.notes,
+      qcInspectionStatus: "Not Started",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    productionRunsStore = [savedRun, ...productionRunsStore];
+
+    productionOrdersStore = productionOrdersStore.map((order) =>
+      order.requestId === requestId
+        ? {
+            ...order,
+            status: "Running",
+            productionRunNo,
+            productionRunStatus: "Running",
+            qcInspectionStatus: "Not Started",
+            updatedAt: now,
+          }
+        : order,
+    );
+
+    developmentRequestsStore = developmentRequestsStore.map((request) =>
+      request.id === requestId
+        ? {
+            ...request,
+            productionOrderStatus: "Running",
+            productionRunNo,
+            productionRunStatus: "Running",
+            qcInspectionStatus: "Not Started",
+            lastUpdate: "Just now",
+          }
+        : request,
+    );
+
+    persistMockStateToLocalStorage();
+
+    return savedRun;
+  }
+
+  return api.post<ProductionRunDraft>(
+    `/development-requests/${requestId}/production/start`,
+    payload,
+  );
+}
+
+export async function completeProductionRun(
+  requestId: string,
+  payload: CompleteProductionPayload,
+): Promise<QCInspectionDraft> {
+  if (USE_MOCK_DATA) {
+    await delay(300);
+
+    const productionRun = productionRunsStore.find(
+      (run) => run.requestId === requestId,
+    );
+
+    if (!productionRun) {
+      throw new Error("Production run not found.");
+    }
+
+    if (productionRun.status !== "Running") {
+      const existingInspection = qcInspectionsStore.find(
+        (inspection) => inspection.requestId === requestId,
+      );
+
+      if (existingInspection) {
+        return existingInspection;
+      }
+
+      throw new Error("Only Running production can be completed.");
+    }
+
+    const productionOrder = productionOrdersStore.find(
+      (order) => order.requestId === requestId,
+    );
+
+    if (!productionOrder) {
+      throw new Error("Production Order not found.");
+    }
+
+    const existingInspection = qcInspectionsStore.find(
+      (inspection) => inspection.requestId === requestId,
+    );
+
+    if (existingInspection) {
+      return existingInspection;
+    }
+
+    const now = new Date().toISOString();
+    const completedAt = payload.completedAt || now;
+    const qcInspectionNo = createQCInspectionNo();
+
+    const completedQuantity = Math.floor(productionRun.startedQuantity * 0.98);
+    const rejectedQuantity = productionRun.startedQuantity - completedQuantity;
+
+    const savedInspection: QCInspectionDraft = {
+      id: `QC-DRAFT-${Date.now()}`,
+      requestId,
+      productionOrderId: productionOrder.id,
+      productionOrderNo: productionOrder.productionOrderNo,
+      productionRunId: productionRun.id,
+      productionRunNo: productionRun.productionRunNo,
+      salesOrderNo: productionOrder.salesOrderNo,
+      qcInspectionNo,
+      status: "Pending",
+      customer: productionOrder.customer,
+      productType: productionOrder.productType,
+      orderQuantity: productionOrder.orderQuantity,
+      inspectedQuantity: productionRun.startedQuantity,
+      passedQuantity: completedQuantity,
+      rejectedQuantity,
+      inspector: "QC Team",
+      notes:
+        payload.notes ||
+        `QC inspection created after completing ${productionRun.productionRunNo}.`,
+      finishedGoodsTransferStatus: "Not Started",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    qcInspectionsStore = [savedInspection, ...qcInspectionsStore];
+
+    productionRunsStore = productionRunsStore.map((run) =>
+      run.requestId === requestId
+        ? {
+            ...run,
+            status: "Completed",
+            completedQuantity,
+            rejectedQuantity,
+            completedBy: payload.completedBy,
+            completedAt,
+            qcInspectionNo,
+            qcInspectionStatus: "Pending",
+            notes: payload.notes || run.notes,
+            updatedAt: now,
+          }
+        : run,
+    );
+
+    productionOrdersStore = productionOrdersStore.map((order) =>
+      order.requestId === requestId
+        ? {
+            ...order,
+            status: "Completed",
+            productionRunStatus: "Completed",
+            qcInspectionNo,
+            qcInspectionStatus: "Pending",
+            finishedGoodsTransferStatus: "Not Started",
+            updatedAt: now,
+          }
+        : order,
+    );
+
+    developmentRequestsStore = developmentRequestsStore.map((request) =>
+      request.id === requestId
+        ? {
+            ...request,
+            productionOrderStatus: "Completed",
+            productionRunStatus: "Completed",
+            qcInspectionNo,
+            qcInspectionStatus: "Pending",
+            finishedGoodsTransferStatus: "Not Started",
+            lastUpdate: "Just now",
+          }
+        : request,
+    );
+
+    persistMockStateToLocalStorage();
+
+    return savedInspection;
+  }
+
+  return api.post<QCInspectionDraft>(
+    `/development-requests/${requestId}/production/complete`,
+    payload,
+  );
+}
+
+export async function passQCInspection(
+  requestId: string,
+  payload: PassQCInspectionPayload,
+): Promise<FinishedGoodsTransferDraft> {
+  if (USE_MOCK_DATA) {
+    await delay(300);
+
+    const inspection = qcInspectionsStore.find(
+      (item) => item.requestId === requestId,
+    );
+
+    if (!inspection) {
+      throw new Error("QC inspection not found.");
+    }
+
+    const existingTransfer = finishedGoodsTransfersStore.find(
+      (transfer) => transfer.requestId === requestId,
+    );
+
+    if (existingTransfer && inspection.status === "Passed") {
+      return existingTransfer;
+    }
+
+    if (inspection.status !== "Pending") {
+      throw new Error("Only Pending QC inspections can be passed.");
+    }
+
+    const productionOrder = productionOrdersStore.find(
+      (order) => order.requestId === requestId,
+    );
+
+    if (!productionOrder) {
+      throw new Error("Production Order not found.");
+    }
+
+    const productionRun = productionRunsStore.find(
+      (run) => run.requestId === requestId,
+    );
+
+    if (!productionRun) {
+      throw new Error("Production Run not found.");
+    }
+
+    const now = new Date().toISOString();
+    const passedAt = payload.passedAt || now;
+    const finishedGoodsTransferNo =
+      existingTransfer?.finishedGoodsTransferNo ||
+      createFinishedGoodsTransferNo();
+
+    const savedTransfer: FinishedGoodsTransferDraft = {
+      id: existingTransfer?.id || `FG-DRAFT-${Date.now()}`,
+      requestId,
+      productionOrderId: productionOrder.id,
+      productionOrderNo: productionOrder.productionOrderNo,
+      productionRunId: productionRun.id,
+      productionRunNo: productionRun.productionRunNo,
+      qcInspectionId: inspection.id,
+      qcInspectionNo: inspection.qcInspectionNo,
+      salesOrderNo: productionOrder.salesOrderNo,
+      finishedGoodsTransferNo,
+      status: "Received",
+      customer: inspection.customer,
+      productType: inspection.productType,
+      quantity: inspection.passedQuantity,
+      rejectedQuantity: inspection.rejectedQuantity,
+      warehouseLocation:
+        payload.warehouseLocation || "Finished Goods Warehouse",
+      receivedBy: payload.passedBy,
+      receivedAt: passedAt,
+      notes:
+        payload.notes ||
+        `Finished goods received after QC pass for ${inspection.qcInspectionNo}.`,
+      createdAt: existingTransfer?.createdAt || now,
+      updatedAt: now,
+    };
+
+    finishedGoodsTransfersStore = existingTransfer
+      ? finishedGoodsTransfersStore.map((transfer) =>
+          transfer.requestId === requestId ? savedTransfer : transfer,
+        )
+      : [savedTransfer, ...finishedGoodsTransfersStore];
+
+    qcInspectionsStore = qcInspectionsStore.map((item) =>
+      item.requestId === requestId
+        ? {
+            ...item,
+            status: "Passed",
+            passedBy: payload.passedBy,
+            passedAt,
+            finishedGoodsTransferNo,
+            finishedGoodsTransferStatus: "Received",
+            notes: payload.notes || item.notes,
+            updatedAt: now,
+          }
+        : item,
+    );
+
+    productionRunsStore = productionRunsStore.map((run) =>
+      run.requestId === requestId
+        ? {
+            ...run,
+            qcInspectionStatus: "Passed",
+            updatedAt: now,
+          }
+        : run,
+    );
+
+    productionOrdersStore = productionOrdersStore.map((order) =>
+      order.requestId === requestId
+        ? {
+            ...order,
+            qcInspectionStatus: "Passed",
+            finishedGoodsTransferNo,
+            finishedGoodsTransferStatus: "Received",
+            updatedAt: now,
+          }
+        : order,
+    );
+
+    developmentRequestsStore = developmentRequestsStore.map((request) =>
+      request.id === requestId
+        ? {
+            ...request,
+            qcInspectionStatus: "Passed",
+            finishedGoodsTransferNo,
+            finishedGoodsTransferStatus: "Received",
+            lastUpdate: "Just now",
+          }
+        : request,
+    );
+
+    persistMockStateToLocalStorage();
+
+    return savedTransfer;
+  }
+
+  return api.post<FinishedGoodsTransferDraft>(
+    `/development-requests/${requestId}/qc/pass`,
     payload,
   );
 }
@@ -1016,6 +1615,48 @@ export async function getMaterialReservationDrafts(): Promise<
   );
 }
 
+export async function getMaterialIssueDrafts(): Promise<
+  InventoryMaterialIssueListItem[]
+> {
+  if (USE_MOCK_DATA) {
+    await delay(250);
+    return materialIssuesStore.map(enrichMaterialIssueForInventory);
+  }
+
+  return api.get<InventoryMaterialIssueListItem[]>("/material-issues");
+}
+
+export async function getFinishedGoodsTransfers(): Promise<
+  InventoryFinishedGoodsListItem[]
+> {
+  if (USE_MOCK_DATA) {
+    await delay(250);
+    return finishedGoodsTransfersStore.map(enrichFinishedGoodsForInventory);
+  }
+
+  return api.get<InventoryFinishedGoodsListItem[]>("/finished-goods");
+}
+
+export async function getProductionRunDrafts(): Promise<
+  ProductionRunListItem[]
+> {
+  if (USE_MOCK_DATA) {
+    await delay(250);
+    return productionRunsStore.map(enrichProductionRunForProduction);
+  }
+
+  return api.get<ProductionRunListItem[]>("/production-runs");
+}
+
+export async function getQCInspectionDrafts(): Promise<QCInspectionListItem[]> {
+  if (USE_MOCK_DATA) {
+    await delay(250);
+    return qcInspectionsStore.map(enrichQCInspectionForProduction);
+  }
+
+  return api.get<QCInspectionListItem[]>("/qc-inspections");
+}
+
 export function clearProductDevelopmentMockStorage() {
   if (!isBrowserEnvironment()) {
     return;
@@ -1031,6 +1672,10 @@ export function clearProductDevelopmentMockStorage() {
   salesOrdersStore = [];
   productionOrdersStore = [];
   materialReservationsStore = [];
+  materialIssuesStore = [];
+  productionRunsStore = [];
+  qcInspectionsStore = [];
+  finishedGoodsTransfersStore = [];
 }
 
 function hydrateMockStateFromLocalStorage() {
@@ -1087,13 +1732,34 @@ function hydrateMockStateFromLocalStorage() {
     productionOrdersStore =
       parsedState.productionOrders &&
       Array.isArray(parsedState.productionOrders)
-        ? parsedState.productionOrders
+        ? normalizeProductionOrders(parsedState.productionOrders)
         : [];
 
     materialReservationsStore =
       parsedState.materialReservations &&
       Array.isArray(parsedState.materialReservations)
-        ? parsedState.materialReservations
+        ? normalizeMaterialReservations(parsedState.materialReservations)
+        : [];
+
+    materialIssuesStore =
+      parsedState.materialIssues && Array.isArray(parsedState.materialIssues)
+        ? parsedState.materialIssues
+        : [];
+
+    productionRunsStore =
+      parsedState.productionRuns && Array.isArray(parsedState.productionRuns)
+        ? normalizeProductionRuns(parsedState.productionRuns)
+        : [];
+
+    qcInspectionsStore =
+      parsedState.qcInspections && Array.isArray(parsedState.qcInspections)
+        ? normalizeQCInspections(parsedState.qcInspections)
+        : [];
+
+    finishedGoodsTransfersStore =
+      parsedState.finishedGoodsTransfers &&
+      Array.isArray(parsedState.finishedGoodsTransfers)
+        ? parsedState.finishedGoodsTransfers
         : [];
   } catch {
     developmentRequestsStore = defaultDevelopmentRequests;
@@ -1104,6 +1770,10 @@ function hydrateMockStateFromLocalStorage() {
     salesOrdersStore = [];
     productionOrdersStore = [];
     materialReservationsStore = [];
+    materialIssuesStore = [];
+    productionRunsStore = [];
+    qcInspectionsStore = [];
+    finishedGoodsTransfersStore = [];
   }
 }
 
@@ -1123,6 +1793,10 @@ function persistMockStateToLocalStorage() {
     salesOrders: salesOrdersStore,
     productionOrders: productionOrdersStore,
     materialReservations: materialReservationsStore,
+    materialIssues: materialIssuesStore,
+    productionRuns: productionRunsStore,
+    qcInspections: qcInspectionsStore,
+    finishedGoodsTransfers: finishedGoodsTransfersStore,
   };
 
   window.localStorage.setItem(
@@ -1160,6 +1834,53 @@ function normalizeDevelopmentRequests(
     productionOrderStatus: request.productionOrderStatus || "Not Started",
     materialReservationStatus:
       request.materialReservationStatus || "Not Started",
+    materialIssueStatus: request.materialIssueStatus || "Not Started",
+    productionRunStatus: request.productionRunStatus || "Not Started",
+    qcInspectionStatus: request.qcInspectionStatus || "Not Started",
+    finishedGoodsTransferStatus:
+      request.finishedGoodsTransferStatus || "Not Started",
+  }));
+}
+
+function normalizeProductionOrders(
+  orders: ProductionOrderDraft[],
+): ProductionOrderDraft[] {
+  return orders.map((order) => ({
+    ...order,
+    materialReservationStatus: order.materialReservationStatus || "Not Started",
+    materialIssueStatus: order.materialIssueStatus || "Not Started",
+    productionRunStatus: order.productionRunStatus || "Not Started",
+    qcInspectionStatus: order.qcInspectionStatus || "Not Started",
+    finishedGoodsTransferStatus:
+      order.finishedGoodsTransferStatus || "Not Started",
+  }));
+}
+
+function normalizeMaterialReservations(
+  reservations: MaterialReservationDraft[],
+): MaterialReservationDraft[] {
+  return reservations.map((reservation) => ({
+    ...reservation,
+    materialIssueStatus: reservation.materialIssueStatus || "Not Started",
+  }));
+}
+
+function normalizeProductionRuns(
+  runs: ProductionRunDraft[],
+): ProductionRunDraft[] {
+  return runs.map((run) => ({
+    ...run,
+    qcInspectionStatus: run.qcInspectionStatus || "Not Started",
+  }));
+}
+
+function normalizeQCInspections(
+  inspections: QCInspectionDraft[],
+): QCInspectionDraft[] {
+  return inspections.map((inspection) => ({
+    ...inspection,
+    finishedGoodsTransferStatus:
+      inspection.finishedGoodsTransferStatus || "Not Started",
   }));
 }
 
@@ -1223,6 +1944,34 @@ function enrichProductionOrderForProduction(
   };
 }
 
+function enrichProductionRunForProduction(
+  productionRun: ProductionRunDraft,
+): ProductionRunListItem {
+  const request = developmentRequestsStore.find(
+    (developmentRequest) => developmentRequest.id === productionRun.requestId,
+  );
+
+  return {
+    ...productionRun,
+    requestName: request?.name || productionRun.requestId,
+    sourceInquiryNo: request?.sourceInquiryNo,
+  };
+}
+
+function enrichQCInspectionForProduction(
+  inspection: QCInspectionDraft,
+): QCInspectionListItem {
+  const request = developmentRequestsStore.find(
+    (developmentRequest) => developmentRequest.id === inspection.requestId,
+  );
+
+  return {
+    ...inspection,
+    requestName: request?.name || inspection.requestId,
+    sourceInquiryNo: request?.sourceInquiryNo,
+  };
+}
+
 function enrichMaterialReservationForInventory(
   reservation: MaterialReservationDraft,
 ): InventoryMaterialReservationListItem {
@@ -1233,6 +1982,34 @@ function enrichMaterialReservationForInventory(
   return {
     ...reservation,
     requestName: request?.name || reservation.requestId,
+    sourceInquiryNo: request?.sourceInquiryNo,
+  };
+}
+
+function enrichMaterialIssueForInventory(
+  issue: MaterialIssueDraft,
+): InventoryMaterialIssueListItem {
+  const request = developmentRequestsStore.find(
+    (developmentRequest) => developmentRequest.id === issue.requestId,
+  );
+
+  return {
+    ...issue,
+    requestName: request?.name || issue.requestId,
+    sourceInquiryNo: request?.sourceInquiryNo,
+  };
+}
+
+function enrichFinishedGoodsForInventory(
+  transfer: FinishedGoodsTransferDraft,
+): InventoryFinishedGoodsListItem {
+  const request = developmentRequestsStore.find(
+    (developmentRequest) => developmentRequest.id === transfer.requestId,
+  );
+
+  return {
+    ...transfer,
+    requestName: request?.name || transfer.requestId,
     sourceInquiryNo: request?.sourceInquiryNo,
   };
 }
@@ -1278,6 +2055,26 @@ function createProductionOrderNo() {
 function createMaterialReservationNo() {
   const nextNumber = materialReservationsStore.length + 1;
   return `MR-2026-${String(nextNumber).padStart(4, "0")}`;
+}
+
+function createMaterialIssueNo() {
+  const nextNumber = materialIssuesStore.length + 1;
+  return `MI-2026-${String(nextNumber).padStart(4, "0")}`;
+}
+
+function createProductionRunNo() {
+  const nextNumber = productionRunsStore.length + 1;
+  return `WIP-2026-${String(nextNumber).padStart(4, "0")}`;
+}
+
+function createQCInspectionNo() {
+  const nextNumber = qcInspectionsStore.length + 1;
+  return `QC-2026-${String(nextNumber).padStart(4, "0")}`;
+}
+
+function createFinishedGoodsTransferNo() {
+  const nextNumber = finishedGoodsTransfersStore.length + 1;
+  return `FG-2026-${String(nextNumber).padStart(4, "0")}`;
 }
 
 function getDefaultWorkCenter(productType: DevelopmentType) {
@@ -1433,6 +2230,20 @@ function createMaterialLine(
     requiredQuantity: roundedRequiredQuantity,
     reservedQuantity: roundedRequiredQuantity,
     stockStatus: getMockStockStatus(roundedRequiredQuantity),
+  };
+}
+
+function createMaterialIssueLine(
+  material: ReservedMaterial,
+): MaterialIssueLine {
+  return {
+    id: `MIL-${material.id}`,
+    materialCode: material.materialCode,
+    materialName: material.materialName,
+    specification: material.specification,
+    unit: material.unit,
+    issuedQuantity: material.reservedQuantity,
+    remarks: material.remarks,
   };
 }
 
